@@ -1,0 +1,87 @@
+{
+  "experiment": "tonguedx2_12field_dinov2_vits14_lora",
+  "task_type": "12 independent categorical tongue-attribute predictions",
+  "fields": [
+    "tongue_color",
+    "tongue_shape_indentation",
+    "tongue_shape_form",
+    "tongue_shape_stab",
+    "tongue_shape_crack",
+    "tongue_shape_ecchymosis",
+    "coating_nature_peel",
+    "coating_nature_moistening",
+    "coating_nature_decay",
+    "coating_nature_thickness",
+    "coating_colour",
+    "tongue_color_tipside"
+  ],
+  "class_codes": {
+    "tongue_color": [1, 2, 3, 4, 5],
+    "tongue_shape_indentation": [1, 2],
+    "tongue_shape_form": [1, 2, 3],
+    "tongue_shape_stab": [1, 2],
+    "tongue_shape_crack": [1, 2],
+    "tongue_shape_ecchymosis": [1, 2],
+    "coating_nature_peel": [1, 2, 3, 4],
+    "coating_nature_moistening": [1, 2, 3],
+    "coating_nature_decay": [1, 2, 3],
+    "coating_nature_thickness": [1, 2],
+    "coating_colour": [1, 2, 3],
+    "tongue_color_tipside": [1, 2, 3, 4]
+  },
+  "model": {
+    "hf_repo": "facebook/dinov2-small",
+    "architecture": "DINOv2 ViT-S/14",
+    "input_size": 336,
+    "lora_rank": 16,
+    "lora_alpha": 32,
+    "lora_dropout": 0.05,
+    "lora_targets": [
+      "attention.attention.query",
+      "attention.attention.key",
+      "attention.attention.value",
+      "mlp.fc1",
+      "mlp.fc2"
+    ],
+    "readout": "mean_patch_pool -> Linear(384,512) -> ReLU -> Dropout(0.3) -> 12 categorical heads",
+    "normalization_mean": [0.485, 0.456, 0.406],
+    "normalization_std": [0.229, 0.224, 0.225]
+  },
+  "training": {
+    "epochs": 80,
+    "patience": 12,
+    "batch_size": 4,
+    "gradient_accumulation": 4,
+    "lora_learning_rate": 0.0001,
+    "head_learning_rate": 0.0003,
+    "weight_decay": 0.01,
+    "optimizer": "AdamW",
+    "scheduler": "CosineAnnealingWarmRestarts(T_0=10,T_mult=2)",
+    "ema_decay": 0.999,
+    "amp": "float16",
+    "loss": "mean of 12 class-weighted CrossEntropyLoss heads; inverse-frequency weights capped at 20",
+    "seed": 42,
+    "select_checkpoint_by": "validation_macro_field_auprc_ovr",
+    "test_is_never_used_for_selection": true
+  },
+  "augmentation": {
+    "horizontal_flip_probability": 0.5,
+    "rotation_degrees": 5,
+    "brightness": 0.05,
+    "saturation": 0.05,
+    "hue": 0.01
+  },
+  "data": {
+    "annotations_xlsx": "list/标注全量.xlsx",
+    "images_subdir": "seg",
+    "split_csv_patterns": ["list/train_fold{fold}.csv", "list/val_fold{fold}.csv", "list/test.csv"],
+    "annotation_join_keys": ["id", "image_path"],
+    "split_fold": 1
+  },
+  "evaluation": {
+    "prediction": "argmax per categorical field",
+    "threshold_calibration": "not applicable",
+    "reported_metrics": ["accuracy", "macro_f1_present_classes", "macro_auprc_one_vs_rest"]
+  },
+  "note": "Backbone, LoRA, input size, optimizer, augmentation, batch size, seed, training epochs, patience, and Fold 1 train/validation/test assignment follow the preceding eight-label experiment. The workbook contains categorical codes, so the output heads and loss are adapted to multiclass fields."
+}
